@@ -1,0 +1,10 @@
+com/tradingbot/model/CryptoPrice.class
+com/tradingbot/config/StartupRunner.class
+com/tradingbot/config/ReactiveConfig.class
+com/tradingbot/Application.class
+com/tradingbot/config/SecurityConfig.class
+com/tradingbot/service/BinanceWebSocketService.class
+com/tradingbot/service/PriceAggregatorService.class
+com/tradingbot/controller/CryptoController.class
+com/tradingbot/model/MetricsDto.class
+com/tradingbot/api/ApiExceptionHandler.class
