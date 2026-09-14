@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 type Price = { symbol: string; price: number; change24h: number; volume: number; timestamp: string };
 type Position = { symbol: string; quantity: number; averageEntryPrice: number; marketPrice: number; marketValue: number; unrealizedPnl: number };
@@ -19,31 +21,64 @@ export default function Home() {
   const [quantity, setQuantity] = useState("0.001");
   const [message, setMessage] = useState("Connecting to paper execution");
   const [strategyEnabled, setStrategyEnabled] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authMessage, setAuthMessage] = useState("");
+
+  async function authenticatedFetch(path: string, init: RequestInit = {}) {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${session?.access_token ?? ""}`);
+    return fetch(`${apiUrl}${path}`, { ...init, headers });
+  }
 
   async function refresh() {
+    if (!session) return;
     try {
       const [priceResponse, portfolioResponse, orderResponse] = await Promise.all([
-        fetch(`${apiUrl}/api/crypto/prices`, { cache: "no-store" }),
-        fetch(`${apiUrl}/api/portfolio`, { cache: "no-store" }),
-        fetch(`${apiUrl}/api/trading/orders`, { cache: "no-store" }),
+        authenticatedFetch("/api/crypto/prices", { cache: "no-store" }),
+        authenticatedFetch("/api/portfolio", { cache: "no-store" }),
+        authenticatedFetch("/api/trading/orders", { cache: "no-store" }),
       ]);
       if (!priceResponse.ok || !portfolioResponse.ok || !orderResponse.ok) throw new Error("API unavailable");
       setPrices(await priceResponse.json());
       setPortfolio(await portfolioResponse.json());
       setOrders((await orderResponse.json()).slice(-8).reverse());
-      const strategyResponse = await fetch(`${apiUrl}/api/strategy`, { cache: "no-store" });
+      const strategyResponse = await authenticatedFetch("/api/strategy", { cache: "no-store" });
       if (strategyResponse.ok) setStrategyEnabled((await strategyResponse.json()).enabled);
       setMessage("Live market data connected");
     } catch { setMessage("Backend offline · start Spring Boot on port 8080"); }
   }
 
-  useEffect(() => { refresh(); const timer = window.setInterval(refresh, 5000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => { if (!session) return; refresh(); const timer = window.setInterval(refresh, 5000); return () => window.clearInterval(timer); }, [session]);
+
+  async function authenticate(event: FormEvent) {
+    event.preventDefault();
+    setAuthMessage("");
+    const result = authMode === "signin"
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } });
+    if (result.error) setAuthMessage(result.error.message);
+    else setAuthMessage(authMode === "signup" ? "Check your email to confirm your account." : "");
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setSession(null);
+  }
 
   async function submitOrder(event: FormEvent) {
     event.preventDefault();
     setMessage("Submitting paper order...");
     try {
-      const response = await fetch(`${apiUrl}/api/trading/orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, side, quantity: Number(quantity) }) });
+      const response = await authenticatedFetch("/api/trading/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol, side, quantity: Number(quantity) }) });
       const order = await response.json();
       setMessage(order.status === "FILLED" ? `Filled ${side} ${quantity} ${symbol}` : order.rejectionReason ?? "Order rejected");
       await refresh();
@@ -53,16 +88,20 @@ export default function Home() {
   async function toggleStrategy() {
     const enabled = !strategyEnabled;
     setStrategyEnabled(enabled);
-    await fetch(`${apiUrl}/api/strategy/enabled?enabled=${enabled}`, { method: "POST" });
+    await authenticatedFetch(`/api/strategy/enabled?enabled=${enabled}`, { method: "POST" });
   }
 
   const selectedPrice = prices[symbol]?.price;
   const totalPnl = useMemo(() => portfolio.positions.reduce((sum, position) => sum + position.unrealizedPnl, 0), [portfolio.positions]);
   const tracked = ["BTCUSDT", "ETHUSDT", "BNBUSDT"];
 
+  if (!session) {
+    return <main className="auth-shell"><div className="auth-card"><span className="brand-mark">C</span><p className="eyebrow">CRYPTOWATCH / PRIVATE TERMINAL</p><h1>{authMode === "signin" ? "Welcome back." : "Open your desk."}</h1><p className="muted">Sign in to access your paper portfolio and live market workspace.</p><form onSubmit={authenticate}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input type="password" minLength={6} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>{authMessage && <p className="auth-message">{authMessage}</p>}<button className="submit buy" type="submit">{authMode === "signin" ? "Sign in" : "Create account"}<span>↗</span></button></form><button className="auth-switch" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")}>{authMode === "signin" ? "Need an account? Sign up" : "Already registered? Sign in"}</button></div></main>;
+  }
+
   return (
     <main className="shell">
-      <header className="topbar"><div className="brand"><span className="brand-mark">C</span><div><strong>CRYPTOWATCH</strong><span>paper trading terminal</span></div></div><div className="status"><span className="pulse" /> {message}</div><button className="avatar" aria-label="Account menu">MH</button></header>
+      <header className="topbar"><div className="brand"><span className="brand-mark">C</span><div><strong>CRYPTOWATCH</strong><span>paper trading terminal</span></div></div><div className="status"><span className="pulse" /> {message}</div><button className="avatar" onClick={signOut} aria-label="Sign out">OUT</button></header>
       <section className="intro"><div><p className="eyebrow">MARKET OPERATIONS / 01</p><h1>Stay ahead<br /><em>of the tape.</em></h1><p className="lede">A focused command center for real-time crypto prices, paper execution, and portfolio health.</p></div><div className="session"><span>SESSION VALUE</span><strong>{money(portfolio.totalValue)}</strong><small><b className={totalPnl >= 0 ? "positive" : "negative"}>{totalPnl >= 0 ? "+" : ""}{money(totalPnl)}</b> unrealized today</small></div></section>
       <section className="ticker-grid">{tracked.map((key) => { const item = prices[key]; return <article className="ticker" key={key}><div className="ticker-head"><span>{key.replace("USDT", "")}</span><span className="coin-pip" /></div><strong>{item ? money(item.price) : "--"}</strong><span className={item?.change24h >= 0 ? "positive" : "negative"}>{item ? `${item.change24h >= 0 ? "+" : ""}${item.change24h.toFixed(2)}%` : "Waiting for feed"}</span><div className="sparkline"><i /><i /><i /><i /><i /><i /><i /></div></article>; })}</section>
       <div className="workspace"><section className="panel market-panel"><div className="panel-title"><div><span className="eyebrow">MARKET PULSE</span><h2>Tracked assets</h2></div><span className="live-tag"><span className="pulse" /> LIVE</span></div><div className="asset-table"><div className="table-head"><span>Asset</span><span>Last price</span><span>24h move</span><span>Volume</span></div>{Object.values(prices).map((item) => <div className="asset-row" key={item.symbol}><span className="asset-name"><b>{item.symbol.slice(0, -4)}</b><small>/ USDT</small></span><strong>{money(item.price)}</strong><span className={item.change24h >= 0 ? "positive" : "negative"}>{item.change24h >= 0 ? "+" : ""}{item.change24h.toFixed(2)}%</span><span className="muted">{item.volume.toLocaleString()}</span></div>)}{Object.keys(prices).length === 0 && <div className="empty">Waiting for live quotes...</div>}</div></section><section className="panel order-panel"><div className="panel-title"><div><span className="eyebrow">EXECUTION</span><h2>Place paper order</h2></div><span className="paper-tag">PAPER</span></div><form onSubmit={submitOrder}><div className="segmented"><button type="button" className={side === "BUY" ? "active buy" : ""} onClick={() => setSide("BUY")}>Buy</button><button type="button" className={side === "SELL" ? "active sell" : ""} onClick={() => setSide("SELL")}>Sell</button></div><label>Market<select value={symbol} onChange={(event) => setSymbol(event.target.value)}><option>BTCUSDT</option><option>ETHUSDT</option><option>BNBUSDT</option></select></label><label>Quantity<input type="number" min="0.00000001" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label><div className="estimate"><span>Estimated notional</span><strong>{selectedPrice ? money(selectedPrice * Number(quantity)) : "--"}</strong></div><button className={`submit ${side.toLowerCase()}`} type="submit">Review {side.toLowerCase()} order <span>↗</span></button></form></section></div>

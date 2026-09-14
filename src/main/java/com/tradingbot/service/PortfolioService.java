@@ -21,10 +21,10 @@ public class PortfolioService {
         this.prices = prices;
     }
 
-    public PortfolioSummary getSummary() {
+    public PortfolioSummary getSummary(String ownerId) {
         BigDecimal marketValue = BigDecimal.ZERO;
         List<PortfolioSummary.PositionView> views = new java.util.ArrayList<>();
-        for (Position position : positionRepository.findAll()) {
+        for (Position position : positionRepository.findByOwnerId(ownerId)) {
             CryptoPrice quote = prices.getLatestPrice(position.getSymbol());
             BigDecimal marketPrice = quote == null ? BigDecimal.ZERO : quote.getPrice();
             BigDecimal value = position.getQuantity().multiply(marketPrice);
@@ -33,7 +33,9 @@ public class PortfolioService {
             views.add(new PortfolioSummary.PositionView(position.getSymbol(), position.getQuantity(),
                 position.getAverageEntryPrice(), marketPrice, value, pnl));
         }
-        BigDecimal cash = accountRepository.findById(1L).orElseThrow().getCashBalance();
+        BigDecimal cash = accountRepository.findById(ownerId)
+            .map(PortfolioAccount::getCashBalance)
+            .orElse(BigDecimal.ZERO);
         return new PortfolioSummary(cash, marketValue, cash.add(marketValue), views);
     }
 }

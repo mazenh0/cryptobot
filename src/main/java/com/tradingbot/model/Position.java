@@ -2,6 +2,7 @@ package com.tradingbot.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 
@@ -10,7 +11,10 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "positions")
+@IdClass(PositionId.class)
 public class Position {
+    @Id
+    private String ownerId;
     @Id
     private String symbol;
     @Column(precision = 30, scale = 18)
@@ -21,13 +25,15 @@ public class Position {
 
     protected Position() {}
 
-    public Position(String symbol, BigDecimal quantity, BigDecimal averageEntryPrice) {
+    public Position(String ownerId, String symbol, BigDecimal quantity, BigDecimal averageEntryPrice) {
+        this.ownerId = ownerId;
         this.symbol = symbol;
         this.quantity = quantity;
         this.averageEntryPrice = averageEntryPrice;
         this.updatedAt = Instant.now();
     }
 
+    public String getOwnerId() { return ownerId; }
     public String getSymbol() { return symbol; }
     public BigDecimal getQuantity() { return quantity; }
     public BigDecimal getAverageEntryPrice() { return averageEntryPrice; }

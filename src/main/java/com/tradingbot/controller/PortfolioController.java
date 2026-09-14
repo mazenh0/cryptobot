@@ -5,6 +5,7 @@ import com.tradingbot.service.PortfolioService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/portfolio")
@@ -16,7 +17,7 @@ public class PortfolioController {
     }
 
     @GetMapping
-    public PortfolioSummary getPortfolio() {
-        return portfolio.getSummary();
+    public PortfolioSummary getPortfolio(Authentication authentication) {
+        return portfolio.getSummary(authentication.getName());
     }
 }

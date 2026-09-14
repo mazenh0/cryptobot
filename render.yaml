@@ -7,5 +7,15 @@ services:
     envVars:
       - key: FRONTEND_ORIGIN
         sync: false
+      - key: SUPABASE_AUTH_ENABLED
+        value: "true"
+      - key: SUPABASE_JWT_ISSUER
+        sync: false
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
       - key: TRADING_PAPER_STARTING_CASH
         value: "10000"

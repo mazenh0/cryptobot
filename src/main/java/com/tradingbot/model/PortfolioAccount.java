@@ -12,20 +12,20 @@ import java.time.Instant;
 @Table(name = "portfolio_account")
 public class PortfolioAccount {
     @Id
-    private Long id;
+    private String id;
     @Column(precision = 30, scale = 18)
     private BigDecimal cashBalance;
     private Instant updatedAt;
 
     protected PortfolioAccount() {}
 
-    public PortfolioAccount(BigDecimal cashBalance) {
-        this.id = 1L;
+    public PortfolioAccount(String id, BigDecimal cashBalance) {
+        this.id = id;
         this.cashBalance = cashBalance;
         this.updatedAt = Instant.now();
     }
 
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public BigDecimal getCashBalance() { return cashBalance; }
     public void debit(BigDecimal amount) { cashBalance = cashBalance.subtract(amount); updatedAt = Instant.now(); }
     public void credit(BigDecimal amount) { cashBalance = cashBalance.add(amount); updatedAt = Instant.now(); }

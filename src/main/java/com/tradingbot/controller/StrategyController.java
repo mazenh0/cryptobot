@@ -2,6 +2,7 @@ package com.tradingbot.controller;
 
 import com.tradingbot.service.MovingAverageStrategyService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 
@@ -15,13 +16,13 @@ public class StrategyController {
     }
 
     @GetMapping
-    public Map<String, Object> status() {
-        return Map.of("enabled", strategy.isEnabled(), "name", "Moving average crossover", "fastPeriod", 5, "slowPeriod", 20);
+    public Map<String, Object> status(Authentication authentication) {
+        return Map.of("enabled", strategy.isEnabled(authentication.getName()), "name", "Moving average crossover", "fastPeriod", 5, "slowPeriod", 20);
     }
 
     @PostMapping("/enabled")
-    public Map<String, Object> setEnabled(@RequestParam boolean enabled) {
-        strategy.setEnabled(enabled);
-        return status();
+    public Map<String, Object> setEnabled(@RequestParam boolean enabled, Authentication authentication) {
+        strategy.setEnabled(authentication.getName(), enabled);
+        return status(authentication);
     }
 }

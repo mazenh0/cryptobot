@@ -7,6 +7,15 @@ body { margin:0; background:var(--paper); color:var(--ink); font-family:'Space G
 button, input, select { font:inherit; }
 button { cursor:pointer; }
 .shell { max-width:1440px; margin:0 auto; padding:0 42px 36px; }
+.auth-shell { min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--paper); }
+.auth-card { width:min(100%, 430px); background:var(--white); border:1px solid var(--line); padding:42px; box-shadow:0 24px 60px rgba(25,37,34,.08); }
+.auth-card > .brand-mark { display:grid; margin-bottom:28px; }
+.auth-card h1 { font-size:42px; letter-spacing:-.06em; margin:10px 0; }
+.auth-card > .muted { line-height:1.5; font-size:13px; margin-bottom:28px; }
+.auth-card label { display:block; color:var(--muted); font:10px 'DM Mono',monospace; margin:16px 0 7px; text-transform:uppercase; }
+.auth-card input { display:block; width:100%; margin-top:7px; border:1px solid var(--line); background:var(--paper); padding:12px; outline:none; color:var(--ink); }
+.auth-message { color:var(--red); font:11px 'DM Mono',monospace; line-height:1.5; }
+.auth-switch { border:0; background:transparent; color:var(--green); font:11px 'DM Mono',monospace; margin-top:18px; padding:0; }
 .topbar { height:82px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:28px; }
 .brand { display:flex; align-items:center; gap:11px; margin-right:auto; }.brand-mark { width:31px;height:31px;display:grid;place-items:center;background:var(--ink);color:var(--mint);font-weight:700;font-size:18px; }.brand strong,.brand span { display:block; }.brand strong { font-size:13px;letter-spacing:.11em; }.brand span { color:var(--muted);font:11px 'DM Mono',monospace;margin-top:3px; }
 .status { color:var(--muted);font:11px 'DM Mono',monospace; }.pulse { display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px #d6eee1;margin-right:7px; }.avatar { border:1px solid var(--line);background:var(--white);height:34px;width:34px;border-radius:50%;font:10px 'DM Mono',monospace;color:var(--ink); }

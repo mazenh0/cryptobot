@@ -11,18 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class MovingAverageStrategyService {
     private final PaperTradingService trading;
-    private volatile boolean enabled;
     private final Map<String, Deque<BigDecimal>> prices = new ConcurrentHashMap<>();
-    private final Map<String, OrderSide> signals = new ConcurrentHashMap<>();
+    private final Set<String> enabledUsers = ConcurrentHashMap.newKeySet();
+    private final Map<String, Map<String, OrderSide>> signals = new ConcurrentHashMap<>();
 
     public MovingAverageStrategyService(PaperTradingService trading,
                                         @Value("${trading.strategy.enabled:false}") boolean enabled) {
         this.trading = trading;
-        this.enabled = enabled;
+        if (enabled) enabledUsers.add("default");
     }
 
     public void onPrice(CryptoPrice price) {
-        if (!enabled || price == null) return;
+        if (price == null || enabledUsers.isEmpty()) return;
         Deque<BigDecimal> history = prices.computeIfAbsent(price.getSymbol(), ignored -> new ArrayDeque<>());
         history.addLast(price.getPrice());
         while (history.size() > 20) history.removeFirst();
@@ -31,18 +31,22 @@ public class MovingAverageStrategyService {
         BigDecimal fast = average(history, 5);
         BigDecimal slow = average(history, 20);
         OrderSide signal = fast.compareTo(slow) > 0 ? OrderSide.BUY : OrderSide.SELL;
-        if (signal != signals.put(price.getSymbol(), signal)) {
-            BigDecimal quantity = new BigDecimal("0.001");
-            trading.execute(new OrderRequest(price.getSymbol(), signal, quantity), price);
+        for (String ownerId : enabledUsers) {
+            Map<String, OrderSide> userSignals = signals.computeIfAbsent(ownerId, ignored -> new ConcurrentHashMap<>());
+            if (signal != userSignals.put(price.getSymbol(), signal)) {
+                BigDecimal quantity = new BigDecimal("0.001");
+                trading.execute(ownerId, new OrderRequest(price.getSymbol(), signal, quantity), price);
+            }
         }
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    public boolean isEnabled(String ownerId) {
+        return enabledUsers.contains(ownerId);
     }
 
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+    public void setEnabled(String ownerId, boolean enabled) {
+        if (enabled) enabledUsers.add(ownerId);
+        else enabledUsers.remove(ownerId);
     }
 
     private BigDecimal average(Deque<BigDecimal> history, int period) {

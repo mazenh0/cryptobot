@@ -7,6 +7,7 @@ import com.tradingbot.service.PaperTradingService;
 import com.tradingbot.service.PriceAggregatorService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/trading")
@@ -20,13 +21,13 @@ public class TradingController {
     }
 
     @PostMapping("/orders")
-    public TradeOrder placeOrder(@Valid @RequestBody OrderRequest request) {
+    public TradeOrder placeOrder(@Valid @RequestBody OrderRequest request, Authentication authentication) {
         CryptoPrice price = prices.getLatestPrice(request.symbol());
-        return trading.execute(request, price);
+        return trading.execute(authentication.getName(), request, price);
     }
 
     @GetMapping("/orders")
-    public Iterable<TradeOrder> getOrders() {
-        return trading.getOrders();
+    public Iterable<TradeOrder> getOrders(Authentication authentication) {
+        return trading.getOrders(authentication.getName());
     }
 }
