@@ -1,19 +1,27 @@
 server:
-port: 8080
+  port: 8080
 spring:
-codec:
-max-in-memory-size: 10MB
+  codec:
+    max-in-memory-size: 10MB
+datasource:
+  url: jdbc:h2:file:./data/tradingbot;AUTO_SERVER=TRUE
+  driver-class-name: org.h2.Driver
+  username: sa
+  password:
+jpa:
+  hibernate:
+    ddl-auto: update
+  open-in-view: false
 management:
-endpoints:
-web:
-exposure:
-include: health,info,prometheus
-metrics:
-tags:
-application: trading-bot
-app:
-ws:
-binance: wss://stream.binance.com:9443/ws # placeholder; adapter simulates unless enabled
-coinbase: wss://ws-feed.exchange.coinbase.com # placeholder; adapter simulates unless enabled
-security:
-api-key: change-me
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: trading-bot
+trading:
+  paper:
+    starting-cash: 10000
+  strategy:
+    enabled: false

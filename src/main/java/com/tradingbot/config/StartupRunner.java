@@ -2,6 +2,7 @@ package com.tradingbot.config;
 
 import com.tradingbot.service.BinanceWebSocketService;
 import com.tradingbot.service.PriceAggregatorService;
+import com.tradingbot.service.MovingAverageStrategyService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,13 +16,16 @@ public class StartupRunner {
     private static final Logger log = LoggerFactory.getLogger(StartupRunner.class);
     private final BinanceWebSocketService binanceService;
     private final PriceAggregatorService priceAggregator;
+    private final MovingAverageStrategyService strategy;
     
     private final List<String> DEFAULT_SYMBOLS = List.of("btcusdt", "ethusdt", "bnbusdt");
     
     public StartupRunner(BinanceWebSocketService binanceService, 
-                        PriceAggregatorService priceAggregator) {
+                        PriceAggregatorService priceAggregator,
+                        MovingAverageStrategyService strategy) {
         this.binanceService = binanceService;
         this.priceAggregator = priceAggregator;
+        this.strategy = strategy;
     }
     
     @PostConstruct
@@ -30,6 +34,7 @@ public class StartupRunner {
         
         DEFAULT_SYMBOLS.forEach(symbol -> {
             binanceService.streamPrices(symbol)
+                .doOnNext(strategy::onPrice)
                 .subscribe(
                     priceAggregator::updatePrice,
                     error -> log.error("Error tracking {}: {}", symbol, error.getMessage())

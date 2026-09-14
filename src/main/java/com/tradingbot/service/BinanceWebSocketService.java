@@ -25,14 +25,19 @@ public class BinanceWebSocketService {
     public Flux<CryptoPrice> streamPrices(String symbol) {
         String streamUrl = "wss://stream.binance.com:9443/ws/" + symbol.toLowerCase() + "@ticker";
         
-        return webSocketClient.execute(
+        return Flux.create(sink -> webSocketClient.execute(
             URI.create(streamUrl),
             session -> session.receive()
                 .map(WebSocketMessage::getPayloadAsText)
                 .map(this::parseBinanceMessage)
-                .doOnNext(price -> log.info("Received price update: {}", price))
+                .filter(price -> price != null)
+                .doOnNext(price -> {
+                    log.info("Received price update: {}", price);
+                    sink.next(price);
+                })
+                .doOnError(sink::error)
                 .then()
-        ).thenMany(Flux.never());
+        ).subscribe(ignored -> sink.complete(), sink::error));
     }
     
     private CryptoPrice parseBinanceMessage(String message) {
