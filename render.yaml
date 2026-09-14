@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: cryptobot-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: TRADING_PAPER_STARTING_CASH
+        value: "10000"
