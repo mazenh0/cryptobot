@@ -25,3 +25,6 @@ trading:
     starting-cash: 10000
   strategy:
     enabled: false
+app:
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}

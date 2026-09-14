@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class MovingAverageStrategyService {
     private final PaperTradingService trading;
-    private final boolean enabled;
+    private volatile boolean enabled;
     private final Map<String, Deque<BigDecimal>> prices = new ConcurrentHashMap<>();
     private final Map<String, OrderSide> signals = new ConcurrentHashMap<>();
 
@@ -35,6 +35,14 @@ public class MovingAverageStrategyService {
             BigDecimal quantity = new BigDecimal("0.001");
             trading.execute(new OrderRequest(price.getSymbol(), signal, quantity), price);
         }
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     private BigDecimal average(Deque<BigDecimal> history, int period) {
